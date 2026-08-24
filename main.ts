@@ -83,6 +83,7 @@ function resetToIdle(): void {
   obstacles = [];
   fallRotation = 0;
   distance = 0;
+  status.textContent = "";
 }
 
 function endRun(): void {
