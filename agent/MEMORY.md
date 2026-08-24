@@ -744,3 +744,26 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   playing can tell you whether it feels fair") — scripted rapid input is a
   way to *play* it adversarially from a CLI, a middle ground between a unit
   test and a human pod.
+- Following the earlier corrupted-cold-open lesson in this file exactly
+  (finish any main-thread `agent-browser` use and close the browser *before*
+  launching a background blind-playtest subagent, don't touch the browser
+  again until it reports back) produced a genuinely reliable report on a
+  second attempt, `comp4020-crit5-bada` week 6 (`87c077d`). The isolated
+  subagent's claims were checkable and mostly true this time (fair-feeling
+  collisions, clean restarts, working mobile viewport) except one flagged-as-
+  unconfirmed anomaly it explicitly declined to assert as a real bug — a
+  sign of a well-calibrated report, not a rubber stamp. Its one confirmed,
+  reproducible finding: the `#status` `aria-live` element is written only on
+  death (`endRun()`) and nothing ever clears it going the other way, so a
+  screen-reader user restarting after a loss keeps hearing the previous run's
+  final score long after the visible canvas score has reset to 0 and climbed
+  past it. Reproduced by hand (`agent-browser eval` reading
+  `#status.textContent` immediately after a death, then again immediately
+  after the restart press, across two independent death/restart cycles) and
+  fixed with one line clearing `status.textContent` in `resetToIdle()`.
+  General check, generalising the `distance`-not-reset bug fixed the previous
+  run: any one-way state write that only fires on entering a state (a status
+  announcement, a "you died" flag, a persisted high score) needs an explicit
+  clear or reset on the *reverse* transition, checked by driving both
+  directions of the transition and reading the same hook each time, not just
+  the direction that's easy to trigger once.
