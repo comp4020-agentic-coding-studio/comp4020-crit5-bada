@@ -1,94 +1,83 @@
 # now
 
-## State as of this run (2026-08-24 ~15:45 AEST, 166.5 h to cutoff, crit 5 "A game")
+## State as of this run (2026-08-24 ~21:40 AEST, 160.5 h to cutoff, crit 5 "A game")
 
-First run on `comp4020-crit5-bada`. Fetched `crits/05-game.json`: brief is
-"build a tiny browser game" with one mechanic, "obvious in ten seconds, still
-interesting at five minutes, no tutorial in sight" (Bushnell's law, Mario 1-1
-as the affordance-design exemplar). Acceptance bar: deployable, losable (a
-wrong move is possible, play ends in a win/loss/finish), teaches itself with
-literally no instructions on or off screen, a stranger reaches an ending
-inside five minutes, one rule has a focused automated test, commits show
-growth, and I can account for how the work was directed/grounded/corrected.
-This is the plan-and-build run, not the finishing run (166.5h remaining) —
-per doctrine, no `PROCESS.md`/reflection work yet.
+Second run on `comp4020-crit5-bada`. Still a deepen run, not the finishing run
+(160.5h remaining) — per doctrine, `PROCESS.md`/`reflections/crit-5.md` are
+still untouched, on purpose.
 
-Built a one-button jump/dodge endless runner (canvas, no words anywhere
-except numeric score):
+Worked the previous run's priority list from its own `now.md` hand-off:
 
-- `game-logic.ts`: pure `rectsOverlap` AABB test — the one game rule that's
-  automated (`spec/collision.test.ts`, 4 cases including a same-axis-only
-  overlap that shouldn't count and a touching-edges-isn't-a-collision case).
-- `main.ts`: idle state bobs the player in place; the first input (space,
-  arrow-up, enter, or a click/tap on the canvas — `pointerdown`, so touch
-  works for free) both performs the jump *and* starts the run, so the
-  mechanic is discovered by trying the obvious thing, not told. Speed and
-  obstacle frequency ramp with survival time. Losing = colliding with an
-  obstacle; a `role="status" aria-live` element (visually hidden) announces
-  the numeric score on death for screen readers without narrating rules.
-  `localStorage` keeps a best-distance high score.
-- `index.html`/`styles.css`: full-bleed dark page, canvas centred and
-  responsive (`min(90vw,720px)` × `min(60vh,480px)`), `touch-action: none`.
-  Title "Jump", meta description updated. Did **not** touch `public/card.png`
-  this run — it's still the template placeholder.
+1. **`public/card.png` replaced.** No longer the template placeholder — built
+   from a real `agent-browser` screenshot mid-play (cropped to the canvas,
+   trimmed to the action band, composited with ImageMagick over the site's
+   own dark background, DejaVu-Sans-Bold title text), same technique as
+   `comp4020-crit4-bada` week 6. Verified served at `http://localhost:5183/card.png`
+   (200, 1200×630, 6.7KB). Committed [`9d4e924`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/9d4e924).
+2. **Small real a11y fix**: canvas got `tabindex="0"` so it's reachable in
+   the keyboard tab order — `styles.css` already had a `canvas:focus-visible`
+   rule with nothing to attach to. Confirmed via `agent-browser` (Tab twice →
+   `document.activeElement` is `CANVAS#game`, focus ring visible in a
+   screenshot). Bundled into the same commit as the card.
+3. **Genuine a11y decision, not implemented**: this is a fast one-button
+   reflex game with zero on-screen text (correctly, per the brief's own
+   no-tutorial rule) — a screen-reader user gets the death announcement via
+   `#status` `aria-live` but cannot play the actual timing-based mechanic
+   non-visually in any meaningful sense. Concluded the honest answer is to
+   say this plainly in `PROCESS.md` at finishing time, not invent a fake
+   parallel non-visual mode that the brief's own scope doesn't call for.
+4. **Blind cold-open playtest — ran, but the report was largely wrong.**
+   Launched a background subagent with no source access, told only "here's
+   a URL, you've never seen this, play it." **Its two headline claims were
+   false**: "the game auto-starts on page load with no click needed" and
+   "ArrowUp and Enter do nothing at all" — both falsified within seconds by
+   opening a fresh session serially afterward (true cold open sits at score
+   0 doing nothing until input; ArrowUp and Enter both jump and score
+   exactly like Space, confirmed with screenshots). Root cause, recorded in
+   `MEMORY.md`: the main run was *also* driving `agent-browser` against the
+   same `localhost:5183` dev server at the same time (building the card
+   screenshot) — the two sessions almost certainly contended for the same
+   browser instance, so the subagent was observing a corrupted, cross-talked
+   session, not a real isolated one. **Lesson for next time: never run
+   `agent-browser` in the main thread while a background subagent's task
+   also drives `agent-browser` at the same URL — wait for it to finish, or
+   use a different port.**
+5. **One real bug did survive independent, serial, by-hand verification**
+   from that same corrupted report: after a death, `resetToIdle()` never
+   reset `distance`, so the score readout stayed frozen at the just-ended
+   run's number through the "return to idle" beat — a restart press looked
+   like it did nothing until the *second* press actually started scoring
+   again. Reproduced by hand on a fresh serial session (froze at "43",
+   confirmed with a screenshot), fixed with one line (`distance = 0;` in
+   `resetToIdle()`), reproduced-then-confirmed-fixed the same way (idle
+   readout now shows `0` immediately). `pnpm check` green (21/21) before and
+   after. Committed [`c7126dd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/c7126dd).
+   This is the "one change came from playing rather than reading code" the
+   brief's own spec asks for — genuinely earned, even though the report that
+   pointed at it was mostly unreliable.
 
-Committed as [`1bf3c8f`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/1bf3c8fba91bb744c9499dc6922ee92cb9ec3191).
-`pnpm check` green (21/21 tests, typecheck + build clean) before committing.
-
-Verified live in `agent-browser`, not just by reading the code:
-
-- Cold open: idle bob, zero text besides a "0", console clean.
-- First `press Space` both jumped and started the run (screenshot confirmed).
-- Confirmed a loss is real and reachable: let a run play out with no input
-  after a mashing burst, `#status` read "66. Best 66." — the aria-live text
-  is a legitimate way to check "did it actually end" from the CLI without a
-  visible game-over screen.
-- Confirmed restart: a press after death returned to the idle-bob state.
-- Confirmed click/tap (`mouse down`/`up` on the canvas) triggers jump the
-  same as keyboard.
-- Confirmed mobile viewport (390×844 via `set viewport`, called after the
-  first `open`, per the ordering lesson in `MEMORY.md`) renders the canvas
-  correctly, not just cropped.
-- **Real check, not assumed**: mashed space every ~150ms for 18s straight
-  to test whether constant jumping trivialises the game. It didn't — the
-  player died and restarted multiple times within that window (best crept
-  from lower values up to 59, final read mid-run at 47), confirming the
-  speed ramp creates a genuine skill ceiling rather than a spam-to-win
-  exploit. Worth citing in `PROCESS.md` later: this is the "only playing
-  can tell you whether the collision feels fair" half of the brief, done
-  empirically via scripted input timing, not by eyeballing.
-- Killed both preview servers used for these checks by PID and re-curled to
-  confirm down (background-job tracking across separate Bash calls isn't
-  reliable in this sandbox — see `MEMORY.md`).
+`pnpm check` green throughout. Dev server (port 5183) and `agent-browser`
+both confirmed shut down by PID + re-`curl` at the end of this run.
 
 ## Single most important next action
 
-Deepen the game before the next run treats this as further along than it
-is. Concretely, in priority order:
+Not the finishing run yet — next run should either deepen further or, if the
+prompt calls it the last run, do the finishing steps in doctrine order:
 
-1. **Replace `public/card.png`** with a real screenshot-derived link-preview
-   card (still the template placeholder from `git log` — never touched this
-   run). Same ImageMagick-composite approach as `comp4020-crit4-bada`
-   week 6.
-2. **A11y pass**: the canvas currently has only an `aria-label` and no
-   keyboard focus ring is exercised in practice since the jump listener is
-   on `window`, not the canvas — a screen-reader user gets no ongoing
-   feedback during play, only a death announcement. Worth deciding whether
-   a game this reflex-based can be made meaningfully screen-reader
-   accessible at all, or whether the honest answer is "no, and say so."
-3. **A blind cold-open pass** (the technique used repeatedly on crit 4,
-   `MEMORY.md`): spawn a subagent with only the live URL, no source access,
-   told nothing except "you've never seen this, play it." Confirm it
-   discovers the jump mechanic from the idle bob alone, within the five
-   minutes the spec requires, on both a fresh desktop and mobile viewport
-   session. This is the single most likely place a real bug hides, per the
-   crit-4 track record — five of six cold-open passes there found something
-   real.
-4. Consider whether "still interesting at five minutes" needs anything
-   beyond the speed ramp — e.g. a visible best-score/current-score contrast
-   already exists (grey vs black digits), but there's no other progression
-   signal. Not urgent; the mash-test above is real evidence the core loop
-   already has some depth.
-
-Not yet started: `PROCESS.md` rewrite and `reflections/crit-5.md` — both are
-finishing-run work per doctrine, don't start them early.
+1. If more deepening time remains: reconsider now.md's old point 4 (does
+   "still interesting at five minutes" need anything beyond the speed ramp?
+   — the mash-test evidence from the build run says the core loop already
+   has real depth, so this is optional polish, not a gap) and/or run
+   **another** blind cold-open pass — properly isolated this time (no
+   concurrent `agent-browser` use from the main thread) — since the last one
+   was corrupted and didn't actually deliver a trustworthy verdict on
+   discoverability, only one incidentally-true bug.
+2. If this is the finishing run: write `PROCESS.md` (map to real commits:
+   `1bf3c8f` build, `9d4e924` card+a11y, `c7126dd` the playtest-found bug fix)
+   and `reflections/crit-5.md` (headed "A game", not a week number — the
+   breakthrough candidate is either the mash-test skill-ceiling check from
+   the build run or the corrupted-cold-open-report lesson from this run,
+   whichever better fits "the developer you want to be" prompt). Include the
+   honest a11y limitation in `PROCESS.md` rather than glossing over it.
+   Confirm `git status` clean and push only if explicitly this run's job per
+   the doctrine's finishing steps.

@@ -233,6 +233,33 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   then re-`curl`/re-`ps` to confirm) rather than trusting `jobs -l`/`kill %N`
   to have found it, when "dev server was shut down" needs to be true, not
   just attempted.
+- Running `agent-browser` directly in the main run's own shell *while* a
+  background subagent's prompt also tells it to drive `agent-browser`
+  against the same local dev-server URL produces a corrupted report from
+  the subagent — they contend for the same underlying browser
+  instance/session rather than each getting an isolated one. In
+  `comp4020-crit5-bada` week 6, a "blind cold-open playtest" subagent was
+  launched in the background at the same moment the main run started using
+  `agent-browser` itself (screenshotting mid-play frames to build a link-
+  preview card) against the same `localhost:5183` dev server. The subagent's
+  report came back describing behaviour that flatly contradicted the source
+  and the actual live page — "the game auto-starts on page load with no
+  click needed" and "ArrowUp and Enter do nothing at all" — both falsified
+  within seconds by opening a fresh session serially afterward (a true cold
+  open sat at score 0 doing nothing until input; ArrowUp and Enter both
+  jumped and scored exactly like Space). The most likely cause: the main
+  run's concurrent screenshot/keypress traffic bled into what the subagent's
+  own `agent-browser` calls were observing, so it was reporting on a
+  contended, cross-talking session, not a real isolated cold-open one. One
+  claim from the same corrupted report *did* independently reproduce by hand
+  afterward (a restart press leaving the score readout frozen at the dead
+  run's number) — so a corrupted report isn't necessarily 100% fabricated,
+  but nothing in it can be trusted without a serial, single-session
+  re-check. General rule: never drive `agent-browser` from the main thread
+  while a background subagent's task also drives `agent-browser` at the
+  same URL/port — either wait for the subagent to finish before touching
+  the browser yourself, or give it a separate dev-server port so the two
+  sessions can't collide.
 
 ## Repo-independent lessons
 
