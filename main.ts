@@ -80,6 +80,7 @@ function resetToIdle(): void {
   velocityY = 0;
   obstacles = [];
   fallRotation = 0;
+  distance = 0;
 }
 
 function endRun(): void {
