@@ -13,6 +13,8 @@ const SPEED_RAMP = 5;
 const MIN_GAP = 240;
 const MAX_GAP = 460;
 const BEST_KEY = "jump-best-distance";
+const IDLE_OBSTACLE_RATIO = 0.62;
+const IDLE_OBSTACLE_HEIGHT = 46;
 
 type Phase = "idle" | "running" | "over";
 
@@ -157,8 +159,22 @@ function draw(): void {
   for (const o of obstacles) {
     ctx.fillRect(o.x, groundY - o.h, o.w, o.h);
   }
+  if (phase === "idle") {
+    const iw = 22;
+    ctx.fillRect(width * IDLE_OBSTACLE_RATIO, groundY - IDLE_OBSTACLE_HEIGHT, iw, IDLE_OBSTACLE_HEIGHT);
+  }
 
   const p = playerRect();
+  if (phase === "idle") {
+    const pulse = 0.35 + 0.25 * Math.sin(lastTime / 260);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = "#d1495b";
+    ctx.beginPath();
+    ctx.arc(p.x + p.w / 2, p.y + p.h / 2, p.w * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
   ctx.save();
   ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
   if (phase === "over") ctx.rotate(fallRotation);
