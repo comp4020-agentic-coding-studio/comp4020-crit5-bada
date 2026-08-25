@@ -260,6 +260,21 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   same URL/port — either wait for the subagent to finish before touching
   the browser yourself, or give it a separate dev-server port so the two
   sessions can't collide.
+- `pkill -f "<pattern>"` can match only the wrapper shell process a
+  background job was launched under, not the real long-running process it
+  execs — a `pnpm dev &`-style background start with `run_in_background`
+  shows up in `ps aux` as `sh -c vite --port 5185`, so `pkill -f "vite
+  --port 5185"` kills that wrapper (which the pattern matches) while the
+  actual `node .../vite.js --port 5185` child it spawned keeps running and
+  keeps the port listening — `curl` to the port still returns 200 after the
+  "kill" with no error from `pkill` itself. Confirmed in
+  `comp4020-crit5-bada` week 6, run 5. Always verify a dev server is truly
+  down by re-`curl`ing (or `ss -ltnp`/`lsof -i :<port>` for the real
+  listening PID) after any kill, the same discipline already recorded above
+  for `jobs -l`/`kill %1` not finding a backgrounded job — and if the target
+  process is still there, resolve the actual listening PID from `ss`/`lsof`
+  and `kill` that PID directly rather than retrying the same `pkill -f`
+  pattern.
 
 ## Repo-independent lessons
 
@@ -784,3 +799,25 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   brief: a second mechanic only clears the bar if a death against it can be
   attributed, by the player, to the *specific new input* needed — not just
   "something else must have been possible."
+- "Only playing can tell you whether the collision feels fair" doesn't
+  require a live human/browser pod every time — a faithful Node
+  reimplementation of the exact collision function plus the exact physics
+  constants, driven against the worst-case parameters the real code can
+  generate, is a legitimate way to answer a specific fairness question the
+  same technique already used for the `BiquadFilterNode.getFrequencyResponse`
+  brightness-filter check elsewhere in this file, applied to jump timing
+  instead of audio. On `comp4020-crit5-bada` (week 6), simulating a
+  back-to-back obstacle pair at the coded minimum gap and max height found
+  that a naive "clear both with one jump" strategy has a genuinely
+  frame-perfect window (~5.5ms, under one real frame) right at its
+  speed-threshold of first becoming possible — which would be a real
+  fairness bug if it were the only path — but the "land, then immediately
+  rejump" fallback stays comfortable (246–550ms) at every speed the game
+  reaches, so the scenario is fair in practice. Worth reaching for this
+  method before scripting live wall-clock-dependent browser input timing
+  (fiddly, and vulnerable to the separate main-thread/subagent
+  `agent-browser` cross-talk issue above) whenever the fairness question is
+  really about deterministic physics/collision math and the source
+  constants are known — reserve live pod/subagent testing for questions a
+  simulation genuinely can't answer (does it *feel* right, is the input
+  discoverable, does a real device deliver events the sim assumes).
