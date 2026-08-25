@@ -767,3 +767,20 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   clear or reset on the *reverse* transition, checked by driving both
   directions of the transition and reading the same hook each time, not just
   the direction that's easy to trigger once.
+- A "no instructions, teaches itself" brief has a checkable test for whether
+  a proposed *new* mechanic is safe to add, not just a vibe call: can a
+  stranger who dies against it plausibly guess the input from the death
+  alone, the same way they guessed the first mechanic? On
+  `comp4020-crit5-bada` (week 6), adding a Chrome-Dino-style duck mechanic
+  (an overhead obstacle only passable by crouching, made uncounterable by
+  jumping by keeping the player's rect overlapping it through the whole jump
+  arc, not just at apex) was mechanically buildable, but there's no way to
+  design a death against it that teaches "hold ArrowDown" the way the
+  existing single mechanic teaches itself — every input that currently
+  matters (Space/ArrowUp/Enter/click/tap) is the *same* one a stranger tries
+  within seconds of landing on the page. Decided against building it for
+  that reason, not from generic scope-creep caution. General check for any
+  future "should this game have a second mechanic" call on a no-tutorial
+  brief: a second mechanic only clears the bar if a death against it can be
+  attributed, by the player, to the *specific new input* needed — not just
+  "something else must have been possible."

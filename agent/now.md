@@ -1,72 +1,80 @@
 # now
 
-## State as of this run (2026-08-25 ~08:20 AEST, 149.5 h to cutoff, crit 5 "A game")
+## State as of this run (2026-08-25 ~15:20 AEST, 142.5 h to cutoff, crit 5 "A game")
 
-Third run on `comp4020-crit5-bada`. Still a deepen run, not the finishing run
-(149.5h remaining, `PROCESS.md`/`reflections/crit-5.md` still template —
-confirmed, left untouched on purpose).
+Fourth run on `comp4020-crit5-bada`. Still a deepen run (142.5h remaining,
+`PROCESS.md`/`reflections/crit-5.md` still template — confirmed, left
+untouched on purpose). No code changes this run — a legitimate "checked
+thoroughly, found nothing to fix" outcome, not a skipped run.
 
-Did two real things this run:
+Two things done:
 
-1. **Opening-screen affordance fix.** Checked the idle screen against the
-   brief's own Mario-1-1 bar ("opening screen alone must make the first move
-   obvious") by screenshotting it cold at 1920×1080 — it was a static red
-   square on an empty line with score "0" and nothing else, no obstacle in
-   view, no visual invitation to act. Added a static obstacle ahead of the
-   player and a soft pulsing glow around the player, both idle-only and drawn
-   in the game's existing visual language (no text, no new UI). Committed
-   [`aa8ce61`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/aa8ce61).
-2. **Isolated blind cold-open playtest — done properly this time.** Applied
-   last run's own lesson: closed my own `agent-browser` session and stopped
-   touching the browser entirely before launching the background subagent
-   (no source access, `agent-browser` only), and didn't touch it again until
-   it reported back. The report was reliable this time — collisions read as
-   fair, restarts were clean, mobile viewport matched desktop — and it
-   flagged one anomaly (a floating-looking frame right after a synthetic
-   `blur` + viewport switch) as *unconfirmed* rather than asserting it, which
-   it couldn't reproduce on retest either. Its one solid, reproducible find:
-   the `#status` `aria-live` element only ever gets written on death and
-   never cleared on restart, so a screen-reader user restarting after a loss
-   keeps hearing the previous run's final score long after the visible score
-   has reset to 0 and moved past it. Reproduced by hand (`agent-browser eval`
-   reading `#status.textContent` across two death→restart cycles: stayed at
-   e.g. "44. Best 51." the entire time the canvas plainly showed a fresh
-   score of 0 and climbing), fixed with one line clearing it in
-   `resetToIdle()`. Committed
-   [`87c077d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/87c077d).
+1. **Resolved the open "second mechanic" question from last run's hand-off.**
+   Weighed adding a duck mechanic (Chrome-Dino-style overhead obstacle only
+   avoidable by crouching) as the brief's own suggested "harder, better move."
+   Worked through it in detail: the only way to make an overhead obstacle
+   actually require ducking is to make it *uncounterable* by jumping (the
+   player's rect must overlap it through the whole jump arc, not just at
+   apex) — which works mechanically, but the discovery problem doesn't: a
+   stranger who dies against it has no way to guess "hold ArrowDown" from a
+   death alone, unlike the current single jump mechanic where every input
+   that matters (Space/ArrowUp/Enter/click/tap) is the same one a stranger
+   tries within seconds. That's a real conflict with this brief's specific
+   "no instructions, teaches itself" bar, not a generic scope-creep worry —
+   decided **against** adding it. Not revisiting this again unless a future
+   run has a genuinely different design for it that solves the discovery
+   problem; the existing single-mechanic design (timing + varying obstacle
+   height 26–54px + speed ramp) already satisfies "something under the
+   surface" per the mash-test skill-ceiling check two runs ago.
+2. **Another isolated blind cold-open playtest**, following the now-twice-
+   confirmed protocol exactly (own `agent-browser` use finished and dev
+   server on a fresh port before launching the subagent; didn't touch the
+   browser again until it reported back). Report came back clean: opening
+   screen read as a real invitation to act (title + pulsing glow + visible
+   obstacle), all three keyboard bindings plus click/tap work identically
+   including on a 390×844 viewport, restart is clean with the aria-live fix
+   from two runs ago verified still working, 40 rapid mashes and key-repeat
+   events produced no crash/no console error/no stuck jump, and five
+   deliberate deaths all showed genuine, non-visually-cheated overlaps. One
+   soft, non-bug note: no explicit visible "GAME OVER" text on death (frozen
+   score + dimmed best number is the only visible cue) — judged acceptable,
+   not fixed, since it's readable as an ending and adding explicit "you
+   lost" text would be the first on-screen text the game has ever shown,
+   worth weighing at the finishing run rather than reflexively adding now.
+   One item flagged explicitly as *untested* by the subagent rather than
+   assumed fine: it never encountered two obstacles close enough together to
+   test a genuine double-jump-timing edge case. Low-priority given the
+   18s mash-test two runs ago already showed the ramp defeats pure spam, but
+   worth a targeted look (e.g. force a tight `nextGap` via `agent-browser
+   eval` and see if a fair double-jump is actually possible) on a future
+   deepen run if one remains, rather than assuming it's fine forever.
 
-`pnpm check` green (21/21) throughout, before and after both changes. Dev
-server (port 5183) and `agent-browser` both confirmed shut down by PID +
-re-`curl` at the end of this run. `git status` clean, not pushed (not asked,
-not the finishing run).
+Dev server (port 5184, a fresh port to avoid any cross-talk with a prior
+session) confirmed shut down by PID + re-`curl` at the end of this run.
+`pnpm check` confirmed green (21/21) at the start of this run; no code
+changed since, so it's still green. `git status` clean, nothing to push (not
+the finishing run).
 
 ## Single most important next action
 
 Still not the finishing run unless the next prompt calls it that. If more
-deepening time remains:
-
-- The a11y limitation already identified two runs ago is still real and still
-  unaddressed by design: this is a fast one-button reflex game with zero
-  on-screen text, and a screen-reader user gets death announcements but
-  cannot play the actual timing-based mechanic non-visually. That's still the
-  honest call to make in `PROCESS.md` at finishing time, not something to
-  "fix" with a fake parallel mode — don't reopen this as a build task.
-- Genuinely open question if there's another deepen run: is "still
-  interesting at five minutes" fully covered by the speed ramp alone
-  (mash-test evidence from two runs ago says yes for pure difficulty), or is
-  there a second, orthogonal dimension worth trying per the brief's own
-  "two interacting mechanics is the harder, better move" line — e.g.
-  something like obstacle height variety already existing (26–54px range) vs.
-  a genuinely new second mechanic. Weigh this against not over-scoping a
-  one-button prototype; optional, not a gap.
+deepening time remains, the one concrete open item is the untested
+back-to-back-obstacle double-jump-timing edge case noted above — otherwise
+the game is in a genuinely solid, twice-validated state and doesn't need
+more feature work. Don't reopen the second-mechanic question (see above,
+resolved this run) without a materially different design that solves the
+discovery problem.
 
 If this is the finishing run instead: write `PROCESS.md` (map to real
 commits: `1bf3c8f` build, `9d4e924` card+a11y, `c7126dd` distance-reset fix,
 `aa8ce61` idle-screen affordance, `87c077d` aria-live restart fix) and
 `reflections/crit-5.md` (headed "A game", not a week number). Strong
-breakthrough candidates now: the corrupted-vs-isolated blind-subagent
-contrast across two consecutive runs (a repeatable methodology lesson,
-confirmed twice), or the mash-test skill-ceiling check from the build run.
-Include the honest a11y limitation in `PROCESS.md` rather than glossing over
-it. Confirm `git status` clean and push only if this run's job per doctrine's
-finishing steps.
+breakthrough candidates: the corrupted-vs-isolated blind-subagent contrast
+across two consecutive runs (a repeatable methodology lesson, confirmed
+twice, then repeated cleanly a third time this run), or the mash-test
+skill-ceiling check from the build run. Include the honest a11y limitation
+(fast one-button reflex game, zero on-screen text, a screen-reader user gets
+death announcements but can't play the actual timing mechanic non-visually)
+in `PROCESS.md` rather than glossing over it — this has been the standing
+honest call for three runs now. Confirm `git status` clean and push only if
+this run's job per doctrine's finishing steps.
