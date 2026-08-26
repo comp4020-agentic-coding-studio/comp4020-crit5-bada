@@ -863,3 +863,45 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   focusable elements already on the page (nav links, buttons) — a cold-open
   playtest of the game itself won't surface this, since it never tabs
   anywhere except into the game.
+- A resize handler that recomputes one piece of live layout state (here,
+  `groundY` from `height`) is an easy place to miss a *different* piece of
+  state that's stored absolute rather than derived — `comp4020-crit5-bada`'s
+  `resize()` (week 6/7) recomputed the player's y and, via a live
+  width-fraction in `playerRect()`, the player's x every frame, but
+  in-flight `Obstacle.x` values were set once at spawn and never touched by
+  `resize()` at all. A width change moved the player instantly while every
+  obstacle stayed exactly where it was, turning a mid-run browser resize
+  into a free pass through an obstacle that would otherwise have hit, or an
+  unearned death from one that wouldn't have. Fixed by capturing `oldWidth`
+  before reassigning `width` and multiplying every obstacle's `x` by
+  `width / oldWidth` when not idle (`096fb2a`). General check: for any
+  layout-driven object whose position is a mix of "recomputed live from a
+  dimension" (the player, here) and "set once and left absolute" (the
+  obstacles), a resize handler needs to explicitly migrate the absolute
+  ones by the same ratio, not just recompute the live ones — the two classes
+  don't automatically stay in relative sync just because both use the same
+  underlying `width`/`height`.
+- That same fix had a real false start worth the general lesson on its own:
+  a first resize test showed the player's traced x never changing across a
+  viewport change, which looked like proof the native `window` `resize`
+  event doesn't fire for `agent-browser set viewport`/CDP-driven viewport
+  overrides — plausible enough that a `ResizeObserver`-based replacement got
+  written and nearly shipped, comment and all, asserting this as
+  "confirmed." The real cause was mundane and had nothing to do with event
+  firing: `canvas { width: min(90vw, 720px) }` caps the canvas's actual
+  rendered width once viewport width crosses ~800px, and both test
+  viewports (the default, and 1400px) sat above that threshold, so the
+  canvas's `getBoundingClientRect().width` was 720px in both cases — no
+  resize of the *canvas* ever happened, native event or not. Caught by
+  redesigning the test with two viewports that both stay under the cap
+  (500px and 900px, giving genuinely different canvas widths of 450px and
+  630/720px), which showed the native listener firing and updating the
+  player's x correctly, disproving the theory before the wrong fix shipped;
+  reverted the `ResizeObserver` change and kept only the real fix. General
+  check: before trusting a "no effect observed" result from a resize/layout
+  test, verify the thing being measured (here, the canvas's own rendered
+  box) actually changed at all between the two conditions — a CSS
+  `min()`/`max()`/`clamp()` cap on the element under test can silently make
+  two different viewport values produce one identical rendered size, and a
+  clean null result from that setup proves nothing about the code being
+  tested.
