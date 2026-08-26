@@ -48,13 +48,23 @@ function randomGap(): number {
 function resize(): void {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
+  const oldWidth = width;
   width = rect.width;
   height = rect.height;
   canvas.width = width * dpr;
   canvas.height = height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   groundY = height * GROUND_RATIO;
-  if (phase === "idle") playerY = groundY - PLAYER_SIZE;
+  if (phase === "idle") {
+    playerY = groundY - PLAYER_SIZE;
+  } else if (oldWidth > 0 && width !== oldWidth) {
+    // The player's x is a fraction of width, recomputed every frame; an
+    // obstacle's x is stored absolute. Without rescaling, a width change
+    // mid-run snaps the player across static obstacles instead of moving
+    // both in step, turning a resize into a free pass or a cheap death.
+    const ratio = width / oldWidth;
+    for (const o of obstacles) o.x *= ratio;
+  }
 }
 
 function playerRect(): Rect {
