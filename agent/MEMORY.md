@@ -275,6 +275,25 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   process is still there, resolve the actual listening PID from `ss`/`lsof`
   and `kill` that PID directly rather than retrying the same `pkill -f`
   pattern.
+- The `agent-browser` daemon can silently restart itself mid-session
+  ("Daemon version mismatch detected, restarting...") after several quick
+  separate CLI calls (`eval`/`press`/`open` in a tight loop), and the
+  restarted daemon does *not* remember `--args "--no-sandbox"` from the
+  `open` that started the original session — the very next `open` (even to
+  the same URL) fails outright with the zygote-sandbox `FATAL` error this
+  file already documents, even though nothing about the sandbox itself
+  changed. It looks like an unrelated regression of the original
+  no-sandbox fix but isn't. Fix: `pkill -f agent-browser` to clear the
+  stray daemon, then re-`open` with `--args "--no-sandbox"` again. Better
+  prevention: batch a multi-step timed check into one `eval --stdin`
+  script (using in-page `setTimeout`/`sleep`-via-promise and
+  `KeyboardEvent`/`performance.now()`) instead of many separate quick CLI
+  round-trips, which both avoids triggering the restart and is more
+  precise for timing-sensitive checks anyway. Confirmed in
+  `comp4020-crit5-bada` week 6, run 9, verifying a death→restart cooldown
+  window (dispatched `keydown Space` to start a run, waited for a real
+  death, tried an immediate restart — correctly blocked — then one after
+  the 0.6s cooldown — correctly allowed — all inside one `eval` call).
 
 ## Repo-independent lessons
 
