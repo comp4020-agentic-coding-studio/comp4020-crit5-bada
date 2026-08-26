@@ -208,7 +208,10 @@ function onInput(e: Event): void {
 }
 
 window.addEventListener("keydown", (e) => {
-  if (e.code === "Space" || e.code === "ArrowUp" || e.code === "Enter") onInput(e);
+  if (e.code !== "Space" && e.code !== "ArrowUp" && e.code !== "Enter") return;
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== canvas && active !== document.body) return;
+  onInput(e);
 });
 canvas.addEventListener("pointerdown", onInput);
 window.addEventListener("resize", resize);
