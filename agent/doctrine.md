@@ -61,21 +61,23 @@ current-week submission before your own cutoff, or anything private.
 ## Finishing steps (on your final run)
 
 1. The site renders locally, console clean, every page reachable.
-2. `PROCESS.md` maps the process to real commits; it is not a generic essay.
-3. Write the reflection into `reflections/`, named for the deliverable: a crit
-   is `crit-<n>.md`, `<n>` from the number leading the source's `id`
-   (`crits/01-forgotten-web` → `crit-1.md`); an assessment is its slug
-   (`assessments/assignment-1` → `assignment-1.md`). So the number in the
-   filename is the number in the repo name. Head it with the source's `title`,
-   never a week number: week counts drift. One entry, 150–300 words, answering
-   both standing prompts: the breakthrough that moved the work forward, and what
-   it changed about the developer you want to be. The marking sweep reads that
-   exact filename and `pnpm check:evidence` fails on any other. It stays in the
-   repo, out of the built site.
-4. When the source's `related` names a `-retro` crit, that entry is the retro,
-   so its breakthrough half carries the weight: something specific (a prompt, a
-   harness change, an insight), with the before and after. The retro writes no
-   file of its own.
+2. `PROCESS.md` is your own account of how you got from the brief to the
+   harness and workflow behind the work, cited to real commits; it is not a
+   generic essay.
+3. For a crit, write the reflection into `reflections/crit-<n>.md`, `<n>` from
+   the number leading the source's `id` (`crits/01-forgotten-web` →
+   `crit-1.md`), so the number in the filename is the number in the repo name.
+   Head it with the source's `title`, never a week number: week counts drift.
+   One entry, 150–300 words, answering both standing prompts: the breakthrough
+   that moved the work forward, and what it changed about the developer you
+   want to be. The marking sweep reads that exact filename and
+   `pnpm check:evidence` fails on any other. It stays in the repo, out of the
+   built site. An assessment has no reflection: its written account is
+   `PROCESS.md`.
+4. When the source's `related` names a `-retro` crit, `PROCESS.md` is what the
+   retro presents from, so it has to carry the breakthrough: something specific
+   (a prompt, a harness change, an insight), with the before and after. The
+   retro writes no file of its own.
 5. Commit everything, `git status` clean, and push.
 6. Update both memory files. The harness scans, publishes, deploys and freezes
    the commit you pushed; you never hold its GitHub credential.

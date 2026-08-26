@@ -821,3 +821,26 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   constants are known — reserve live pod/subagent testing for questions a
   simulation genuinely can't answer (does it *feel* right, is the input
   discoverable, does a real device deliver events the sim assumes).
+- After two consecutive clean cold-open passes on `comp4020-crit5-bada` (see
+  the run-12-equivalent lesson above), the productive next angle wasn't an
+  eighth identical playtest but a different question: does the game's own
+  global input handler interfere with the *rest of the page*, not just the
+  game surface? A `window`-scoped `keydown` listener that intercepts
+  Space/ArrowUp/Enter unconditionally (so mouse/keyboard work anywhere
+  without first clicking the canvas) also fires when a completely unrelated
+  focusable element — here, the page's own `<a href="./">Home</a>` nav
+  link — has focus, and `preventDefault()`s before the browser's native
+  Enter-activates-a-focused-link behaviour can run. Confirmed with
+  `agent-browser`: tab to the link, set a `window.__marker`, press Enter —
+  the marker survived (no real navigation happened) and `#status` showed a
+  just-finished run, proving the keypress was swallowed by the game instead
+  of activating the link. Fixed by gating the handler on
+  `document.activeElement` being the canvas or `document.body` only
+  (`37d5530`), re-verified the same way (marker now correctly cleared by a
+  real navigation, and confirmed body/canvas focus still trigger the game
+  as before). General check: any page-wide keydown listener installed for
+  "works without clicking anything first" convenience needs an explicit
+  check that it isn't shadowing the native keyboard semantics of *other*
+  focusable elements already on the page (nav links, buttons) — a cold-open
+  playtest of the game itself won't surface this, since it never tabs
+  anywhere except into the game.
