@@ -961,3 +961,28 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   playtest for *how* it was discovered (deliberate first guess vs.
   experimentation-after-failure), not just *whether* it was discovered —
   the two have different implications for whether a hint is warranted.
+- Not every apparent fairness risk in a difficulty-ramping game is a bug —
+  simulate before assuming a floor/ceiling fix is needed. On
+  `comp4020-crit5-bada` (week 6/7) the question was whether a tall
+  obstacle's speed-scaled arrival time could ever outrun even a
+  frame-perfect double jump, given an uncapped `SPEED_RAMP` that grows
+  every frame with no maximum. A Node simulation of the exact jump physics
+  plus the exact spawn-to-player travel-time formula showed reaction time
+  does shrink below what a frame-perfect double jump needs — but only
+  after ~114s of continuous survival (score in the low thousands), and
+  concluded this is intentional, unbounded escalating difficulty, the same
+  shape as Chrome's Dino game: the ceiling is *supposed* to eventually
+  outrun any player, that's Bushnell's-law "difficult to master," not a
+  fairness defect, and it doesn't touch a "stranger finishes inside five
+  minutes" bar since that bar is about losing fast on an early attempt,
+  not surviving five continuous minutes. No code change made — a genuine
+  checked-and-clean outcome, distinguishable from a rubber stamp because
+  the same simulation could instead have found the impossibility point
+  inside the first 5–10 seconds, which would have been a real bug. General
+  check for any game whose difficulty scales with elapsed survival time
+  and has no explicit cap: before treating "does this mechanic ever become
+  unfair at high difficulty" as an open question needing a code fix,
+  simulate where the unfairness threshold actually falls and compare it
+  against what the brief's own bar requires (finishing fast vs. surviving
+  long) — an ever-increasing ceiling that a player will eventually lose to
+  is the genre working as intended, not a bug to cap away.
