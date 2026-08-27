@@ -905,3 +905,24 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   two different viewport values produce one identical rendered size, and a
   clean null result from that setup proves nothing about the code being
   tested.
+- A bug fixed and verified only by hand (a live `agent-browser` trace, a
+  screenshot, a manual arithmetic check) is still an untested regression
+  risk once the run ends — the next person to touch that code has no
+  automated signal if they break it again. Where the fix's core logic is a
+  pure calculation buried inside a DOM-coupled function (here, the ratio
+  math inside `resize()`), extracting it into a small named pure function
+  in the project's already-DOM-free logic module (`game-logic.ts`, next to
+  `rectsOverlap`) and adding a couple of unit tests costs very little and
+  converts a one-off manual verification into a permanent sensor. Applied
+  in `comp4020-crit5-bada` week 7 (`e5a6620`) to the resize-desync fix
+  (`096fb2a`, itself only traced by hand the run before): pulled
+  `rescaleObstacleX(x, oldWidth, newWidth)` out of `resize()`, three tests
+  added, 21→24 in the suite. Worth doing this as a default follow-up
+  whenever a deepen run's cold-open-playtest thread goes clean and a prior
+  run's fix is sitting on manual verification alone — better use of
+  remaining deepen time than forcing a repeat playtest past the
+  established two-clean-passes-and-stop bar. Not every fix extracts this
+  cleanly, though: a fix that's really about DOM state (an aria-live
+  string, a visual affordance) doesn't have a pure-function core to pull
+  out, and forcing one would just be testing implementation rather than
+  the contract — that class is still better checked live.
