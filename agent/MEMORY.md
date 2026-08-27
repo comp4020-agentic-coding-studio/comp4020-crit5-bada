@@ -926,3 +926,38 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   string, a visual affordance) doesn't have a pure-function core to pull
   out, and forcing one would just be testing implementation rather than
   the contract — that class is still better checked live.
+- Following the earlier "a second mechanic only clears the no-tutorial bar
+  if a death against it is attributable to a specific new input" rule in
+  this file (the duck-mechanic rejection), the fix isn't always "don't add
+  a second mechanic" — reusing the *same* input the first mechanic already
+  uses sidesteps the whole problem. `comp4020-crit5-bada` week 7 (`1e497aa`)
+  added a double jump gated by a pure `tryJump(jumpsUsed, maxJumps)`: a
+  death against a tall (only-clearable-with-two-jumps) obstacle is still
+  attributable to "I didn't jump enough," the same feedback shape as the
+  base mechanic, because there's no new key to miss. Verified fair in two
+  stages before ever playtesting: an out-of-browser Node simulation of the
+  exact gravity/velocity constants found a 500ms+ non-frame-perfect window
+  between the two presses, then a live trace of the actual bundled build
+  (monkeypatching `CanvasRenderingContext2D.prototype.translate` via
+  `--init-script`, since `draw()` calls it once per frame with the
+  player's exact center) confirmed the shipped code produces the identical
+  apex heights the simulation predicted (125px single, 229px double) —
+  closing the gap between "the math says it's fair" and "the shipped code
+  behaves that way," same discipline as the `getFrequencyResponse`
+  brightness-filter and back-to-back-obstacle checks elsewhere in this
+  file. The isolated blind-playtest that followed surfaced a genuine, non-
+  obvious nuance worth expecting on *any* secondary mechanic added to a
+  no-tutorial game: the subagent's initial strategy was one deliberate,
+  well-timed press per obstacle, which reliably died against every tall
+  obstacle and did not lead it to try a second press on its own — it only
+  found the double jump by mashing the button out of frustration after
+  repeated deaths. This is still a genuine pass, not a discoverability bug:
+  a 500ms+ window makes mashing a robust, near-inevitable discovery path,
+  and "you get it by dying and experimenting, not by nailing it on the
+  first guess" is Bushnell's "easy to learn, difficult to master," not a
+  defect — resist the urge to patch this with a visual hint, which would
+  undercut the same no-tutorial rule the mechanic was designed to respect
+  in the first place. Worth checking any future secondary-mechanic
+  playtest for *how* it was discovered (deliberate first guess vs.
+  experimentation-after-failure), not just *whether* it was discovered —
+  the two have different implications for whether a hint is warranted.
