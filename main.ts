@@ -1,4 +1,4 @@
-import { rectsOverlap, rescaleObstacleX, type Rect } from "./game-logic.ts";
+import { rectsOverlap, rescaleObstacleX, tryJump, type Rect } from "./game-logic.ts";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const ctx = canvas.getContext("2d")!;
@@ -15,6 +15,13 @@ const MAX_GAP = 460;
 const BEST_KEY = "jump-best-distance";
 const IDLE_OBSTACLE_RATIO = 0.62;
 const IDLE_OBSTACLE_HEIGHT = 46;
+const MAX_JUMPS = 2;
+const SHORT_MIN_HEIGHT = 26;
+const SHORT_MAX_HEIGHT = 54;
+const TALL_MIN_HEIGHT = 145;
+const TALL_MAX_HEIGHT = 165;
+const TALL_AFTER_COUNT = 2;
+const TALL_CHANCE = 0.35;
 
 type Phase = "idle" | "running" | "over";
 
@@ -22,6 +29,7 @@ interface Obstacle {
   x: number;
   w: number;
   h: number;
+  tall: boolean;
 }
 
 let width = 0;
@@ -40,6 +48,8 @@ let sinceLastSpawn = 0;
 let nextGap = randomGap();
 let fallRotation = 0;
 let resetTimer = 0;
+let jumpsUsed = 0;
+let obstaclesSpawned = 0;
 
 function randomGap(): number {
   return MIN_GAP + Math.random() * (MAX_GAP - MIN_GAP);
@@ -74,7 +84,9 @@ function startRun(): void {
   phase = "running";
   playerY = groundY - PLAYER_SIZE;
   velocityY = JUMP_VELOCITY;
+  jumpsUsed = 1; // the launching press is jump 1
   obstacles = [];
+  obstaclesSpawned = 0;
   distance = 0;
   speed = BASE_SPEED;
   sinceLastSpawn = 0;
@@ -85,6 +97,7 @@ function resetToIdle(): void {
   phase = "idle";
   playerY = groundY - PLAYER_SIZE;
   velocityY = 0;
+  jumpsUsed = 0;
   obstacles = [];
   fallRotation = 0;
   distance = 0;
@@ -108,7 +121,9 @@ function jump(): void {
     if (resetTimer <= 0) resetToIdle();
     return;
   }
-  if (playerY >= groundY - PLAYER_SIZE - 0.5) {
+  const result = tryJump(jumpsUsed, MAX_JUMPS);
+  jumpsUsed = result.jumpsUsed;
+  if (result.allowed) {
     velocityY = JUMP_VELOCITY;
   }
 }
@@ -120,6 +135,7 @@ function update(dt: number, now: number): void {
     if (playerY > groundY - PLAYER_SIZE) {
       playerY = groundY - PLAYER_SIZE;
       velocityY = 0;
+      jumpsUsed = 0;
     }
     speed += SPEED_RAMP * dt;
     distance += speed * dt * 0.05;
@@ -127,8 +143,12 @@ function update(dt: number, now: number): void {
     if (sinceLastSpawn * speed >= nextGap) {
       sinceLastSpawn = 0;
       nextGap = randomGap();
-      const h = 26 + Math.random() * 28;
-      obstacles.push({ x: width + 20, w: 22, h });
+      obstaclesSpawned += 1;
+      const tall = obstaclesSpawned > TALL_AFTER_COUNT && Math.random() < TALL_CHANCE;
+      const h = tall
+        ? TALL_MIN_HEIGHT + Math.random() * (TALL_MAX_HEIGHT - TALL_MIN_HEIGHT)
+        : SHORT_MIN_HEIGHT + Math.random() * (SHORT_MAX_HEIGHT - SHORT_MIN_HEIGHT);
+      obstacles.push({ x: width + 20, w: 22, h, tall });
     }
     for (const o of obstacles) o.x -= speed * dt;
     obstacles = obstacles.filter((o) => o.x + o.w > -10);
@@ -161,8 +181,8 @@ function draw(): void {
   ctx.lineTo(width, groundY);
   ctx.stroke();
 
-  ctx.fillStyle = "#3a3a3a";
   for (const o of obstacles) {
+    ctx.fillStyle = o.tall ? "#2f5d8a" : "#3a3a3a";
     ctx.fillRect(o.x, groundY - o.h, o.w, o.h);
   }
   if (phase === "idle") {

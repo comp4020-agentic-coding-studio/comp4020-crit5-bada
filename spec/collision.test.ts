@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rectsOverlap, rescaleObstacleX } from "../game-logic.ts";
+import { rectsOverlap, rescaleObstacleX, tryJump } from "../game-logic.ts";
 
 // The spec's own framing: "a collision ends the round" can be tested; only
 // playing can tell you whether it feels fair. This covers the testable half.
@@ -35,5 +35,25 @@ describe("resize: an obstacle keeps its relative distance from the player", () =
 
   it("leaves position unchanged when width doesn't change", () => {
     expect(rescaleObstacleX(300, 500, 500)).toBe(300);
+  });
+});
+
+// The second mechanic: a jump is only allowed while jumps remain since the
+// player was last grounded. Landing (main.ts) resets the count to 0.
+describe("double jump: a jump is only allowed while jumps remain", () => {
+  it("allows the first jump from the ground", () => {
+    expect(tryJump(0, 2)).toEqual({ allowed: true, jumpsUsed: 1 });
+  });
+
+  it("allows a second jump mid-air", () => {
+    expect(tryJump(1, 2)).toEqual({ allowed: true, jumpsUsed: 2 });
+  });
+
+  it("rejects a third jump before landing", () => {
+    expect(tryJump(2, 2)).toEqual({ allowed: false, jumpsUsed: 2 });
+  });
+
+  it("rejects any jump at all when maxJumps is 1", () => {
+    expect(tryJump(1, 1)).toEqual({ allowed: false, jumpsUsed: 1 });
   });
 });

@@ -20,3 +20,15 @@ export function rectsOverlap(a: Rect, b: Rect): boolean {
 export function rescaleObstacleX(x: number, oldWidth: number, newWidth: number): number {
   return x * (newWidth / oldWidth);
 }
+
+// The second mechanic: a jump is allowed only while jumps remain since the
+// player was last grounded (main.ts resets jumpsUsed to 0 on landing). This
+// is what turns "press to jump" into "press again mid-air for a double
+// jump" without touching how a single jump feels or is triggered.
+export function tryJump(
+  jumpsUsed: number,
+  maxJumps: number,
+): { allowed: boolean; jumpsUsed: number } {
+  if (jumpsUsed >= maxJumps) return { allowed: false, jumpsUsed };
+  return { allowed: true, jumpsUsed: jumpsUsed + 1 };
+}
