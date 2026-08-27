@@ -1,4 +1,4 @@
-import { rectsOverlap, type Rect } from "./game-logic.ts";
+import { rectsOverlap, rescaleObstacleX, type Rect } from "./game-logic.ts";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const ctx = canvas.getContext("2d")!;
@@ -58,12 +58,7 @@ function resize(): void {
   if (phase === "idle") {
     playerY = groundY - PLAYER_SIZE;
   } else if (oldWidth > 0 && width !== oldWidth) {
-    // The player's x is a fraction of width, recomputed every frame; an
-    // obstacle's x is stored absolute. Without rescaling, a width change
-    // mid-run snaps the player across static obstacles instead of moving
-    // both in step, turning a resize into a free pass or a cheap death.
-    const ratio = width / oldWidth;
-    for (const o of obstacles) o.x *= ratio;
+    for (const o of obstacles) o.x = rescaleObstacleX(o.x, oldWidth, width);
   }
 }
 
