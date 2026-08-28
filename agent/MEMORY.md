@@ -1027,3 +1027,34 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   with the actual report. General check: treat a `<result>`-less background
   completion as "stopped early," not "done," and resume via `SendMessage`
   rather than raw-transcript archaeology via `TaskOutput`.
+- After a run of resize checks that only ever varied *width* (the
+  `rescaleObstacleX` fix and its lessons above), the productive next axis
+  on `comp4020-crit5-bada` (week 6/7, `4c95a1b`) was the one nobody had
+  varied yet: window *height*. The canvas CSS was `height: min(60vh,
+  480px)`; at both marking viewports (1920×1080, 390×844) that resolves to
+  the same 480px canvas, so testing only those two — which the brief's own
+  "play at both marking viewports" line invites — could never have found
+  that a modest, non-maximised browser window (800×500, a plausible real
+  window size, not an exotic device) shrinks the canvas to 300px and clips
+  15–50px of the player off the top of the visible area during a
+  double-jump apex, traced with the same monkeypatched-`translate`
+  `--init-script` technique used elsewhere in this file. Collision math was
+  unaffected (physics runs in canvas-coordinate space regardless of what's
+  visibly drawn) — this was a "can the player see themselves" bug, not a
+  fairness one. Fixed with a CSS height floor (`clamp(400px, 60vh, 480px)`)
+  rather than touching any jump physics constant, specifically to avoid
+  disturbing the extensively simulation-verified fairness numbers already
+  established for those constants elsewhere in this file — re-traced at
+  five window heights post-fix (all positive clearance) and reconfirmed
+  both marking viewports unchanged at 480px. General check: when a fixed
+  set of marking viewports all happen to hit the same clamped/capped value
+  for some CSS dimension, that's a sign the *other* values that dimension
+  can take (a resized window between the caps) are untested territory, not
+  a reason to assume they're covered by proxy — and a state-bleed gotcha
+  hit while measuring this, consistent with other findings in this file:
+  reading a traced global via `agent-browser eval` without reloading the
+  page between measurements can carry over game phase (idle/running/over)
+  from a previous measurement's interactions, producing a plausible-looking
+  but wrong number (a single-jump apex read back when a double-jump was
+  intended) — always fresh-load the page immediately before each timed
+  measurement in a sequence, not just once at the start of the batch.
