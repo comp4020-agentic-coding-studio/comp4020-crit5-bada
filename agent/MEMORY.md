@@ -986,3 +986,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   against what the brief's own bar requires (finishing fast vs. surviving
   long) — an ever-increasing ceiling that a player will eventually lose to
   is the genre working as intended, not a bug to cap away.
+- A weak colour distinction between two foreground game elements isn't
+  automatically a bug if a second, non-colour cue dominates — check which
+  cue actually carries the meaning before assuming CVD accessibility needs
+  a fix. `comp4020-crit5-bada` (week 6/7) draws tall vs. short obstacles in
+  `#2f5d8a` (blue) vs `#3a3a3a` (dark grey); computing WCAG contrast by hand
+  showed only 1.65:1 between the two in normal vision, dropping to
+  ~1.18–1.28:1 under a simulated deuteranopia/protanopia matrix (Machado et
+  al. 2009) — genuinely too weak to rely on as a colour cue for anyone.
+  But the two obstacle *heights* differ by 3–6× (145–165px tall vs. 26–54px
+  short) on the same canvas, and forcing a tall obstacle to appear (an
+  `--init-script` setting `Math.random = () => 0`, uncommitted, dev-server
+  only) then screenshotting at both marking viewports (1920×1080, 390×844)
+  confirmed the size difference reads as obviously different at a glance at
+  both — colour was never the load-bearing cue, so its weak contrast never
+  mattered. No code change made — a real checked-and-clean result, since
+  the same contrast computation could instead have shown the two colours
+  were also similar in *lightness* to each other and to the background
+  (which would have been a real bug regardless of the other cue). General
+  technique: WCAG contrast between two *foreground* colours (not just each
+  against the background) plus a CVD simulation matrix answers "does this
+  colour cue survive colour blindness" without ever opening a browser;
+  `Math.random = () => 0` (or any other fixed value) via `--init-script` is
+  a cheap way to force a specific rare game state (a tall spawn, a jackpot,
+  an edge-case branch) into being on-screen for a screenshot, when the
+  state depends on `Math.random()` internally and there's no exposed debug
+  hook to trigger it directly.

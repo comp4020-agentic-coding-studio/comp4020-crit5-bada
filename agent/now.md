@@ -1,53 +1,46 @@
 # now
 
-## State as of this run (2026-08-28, 77.5 h to cutoff, crit 5 "A game")
+## State as of this run (2026-08-28, 70.5 h to cutoff, crit 5 "A game")
 
-Thirteenth run on `comp4020-crit5-bada`. Still a deepen run — prompt hasn't
+Fourteenth run on `comp4020-crit5-bada`. Still a deepen run — prompt hasn't
 called it the finishing run yet. `pnpm check` green (28/28) at the start and
-unchanged; no commits this run, only investigation.
+unchanged; no commits this run, only investigation. Working tree was clean
+at start and end.
 
-Closed out the flagged next-action from last run: does the tall-obstacle
-spawn logic need a floor/ceiling check against `SPEED_RAMP`, i.e. can a tall
-obstacle spawn at a point where even a well-executed double jump's ~500ms
-timing window no longer fits before it arrives? Answered with a Node
-simulation of the exact jump physics (`GRAVITY`, `JUMP_VELOCITY`, the real
-integration step) plus the exact travel-time formula (`(canvas width×0.88+20)
-/speed`, using the CSS-capped 720px width and `player.x`) — not committed,
-scratch work, same technique as the earlier obstacle-pair and jump-apex
-checks:
+Closed out the last flagged next-action: does the blue-vs-grey colour
+difference between tall and short obstacles actually read at a glance,
+given colour vision variation? Checked two ways:
 
-- Reaction+arrival time shrinks continuously as `speed` ramps
-  (`speed = BASE_SPEED + SPEED_RAMP·t`, unbounded — no cap anywhere in
-  `main.ts`). It drops under ~1.5s (comfortable-reaction territory) at
-  ~27s of continuous survival, and under the ~0.75s floor a
-  frame-perfect double jump needs to even reach 145px clearance at
-  ~114s (score in the low thousands by then).
-- Concluded this is **not a bug** — it's an intentional, unbounded
-  difficulty ramp, the same shape as Chrome's Dino game: the ceiling is
-  supposed to eventually outrun any player, that's Bushnell's-law
-  "difficult to master" doing its job, not a fairness defect. It also
-  doesn't touch the brief's "reach an ending inside five minutes" bar,
-  since that's about a stranger finishing (losing) fast on an early
-  attempt — trivially true here, tall obstacles start from the 3rd
-  obstacle — not about surviving five continuous minutes.
-- No code change made. This is a genuine "checked, found nothing to
-  fix" outcome, not a rubber stamp: the simulation could have found a
-  much earlier impossibility point (e.g. inside the first 5–10 seconds,
-  which *would* have been a real bug worth fixing), and didn't.
+- Computed WCAG contrast ratios by hand: short obstacle `#3a3a3a` vs tall
+  `#2f5d8a` is only 1.65:1 in normal vision — a genuinely weak colour cue,
+  not a strong one — and drops further to ~1.18–1.28:1 under simulated
+  deuteranopia/protanopia (Machado et al. 2009 approximation matrices).
+  Colour was never a reliable secondary cue, independent of colour vision.
+- But confirmed this doesn't matter: forced tall obstacles via an
+  `--init-script` (`Math.random = () => 0`, run against the dev server, not
+  committed) and screenshotted at both marking viewports (1920×1080 and
+  390×844). Tall obstacles (145–165px) render dramatically taller than
+  short ones (26–54px) — obviously so at both sizes, screenshots confirmed
+  visually. Height, not colour, is the load-bearing cue, and it's a strong,
+  scale-invariant one.
+- No code change made — genuine "checked, found nothing to fix" outcome.
+  Dev server (port 5199) and `agent-browser` session were both confirmed
+  torn down afterward (curl connection-refused, not just `pkill`/`jobs`),
+  per the standing lesson in `MEMORY.md` about verifying kills by
+  re-`curl`/`ss` rather than trusting the kill command alone.
 
 ## Single most important next action
 
-Nothing broken or flagged. Deepen time remains before the finishing-run
-prompt, but the two headline threads (double-jump fairness/discoverability,
-and now the speed-ramp/tall-obstacle fairness question) are both closed with
-real, verified answers — don't force a third identical angle just to keep
-busy. If another deepen run lands before the finishing prompt, worth
-rereading `spec/README.md`'s checklist bullets fresh (not from memory) in
-case there's a spec requirement not yet explicitly covered, or doing one more
-cold-open playtest pass focused specifically on the tall-obstacle visual
-distinction (does the blue-vs-grey colour difference actually read at a
-glance across the two marking viewports, given colour vision variation) —
-that's a discoverability question the simulation above can't answer.
+Both headline deepen threads (double-jump fairness/discoverability, speed-
+ramp/tall-obstacle fairness) and the visual-distinction question are now
+closed with real, verified answers. Nothing broken or flagged. Don't force
+a further identical-shaped check just to keep busy — if another deepen run
+lands before the finishing prompt, better spent rereading
+`reflections/README.md` and drafting reflection language early, or one
+fresh cold-open blind-subagent playtest specifically re-testing the
+double-jump discoverability nuance now that some runs have passed (does a
+stranger still find it by mashing after repeated deaths, or has anything
+about the ramp/timing drifted since `1e497aa`).
 
 When this **is** the finishing run: write `PROCESS.md` (map to real commits:
 `1bf3c8f` build, `9d4e924` card+a11y, `c7126dd` distance-reset fix, `aa8ce61`
