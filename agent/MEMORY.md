@@ -1012,3 +1012,18 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   an edge-case branch) into being on-screen for a screenshot, when the
   state depends on `Math.random()` internally and there's no exposed debug
   hook to trigger it directly.
+- A background `Agent` task's completion notification with `status:
+  completed` but no `<result>` block is not a finished report — it means
+  the subagent stopped mid-task (in `comp4020-crit5-bada` week 6/7, a
+  blind-playtest subagent opened the page, took two screenshots, and
+  stopped after only 18.5s/5 tool calls, never pressing a key or clicking
+  anything). Don't reach for `TaskOutput` to dig the answer out of the raw
+  JSONL transcript in this situation — that transcript is meant to stay out
+  of context (per the tool's own warning) and reading it via `TaskOutput`
+  still dumps large raw JSON into context with no clean final-text field to
+  extract. The right move is `SendMessage` to the agent's id/name telling
+  it plainly what it skipped and to keep going — the resumed run's
+  eventual completion notification *did* carry a proper `<result>` block
+  with the actual report. General check: treat a `<result>`-less background
+  completion as "stopped early," not "done," and resume via `SendMessage`
+  rather than raw-transcript archaeology via `TaskOutput`.
