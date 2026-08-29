@@ -1088,3 +1088,37 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   directly, since the failure is invisible in normal testing (storage works
   fine in a default browser profile) and only shows up in a browsing mode
   nobody defaults to.
+- A canvas draw call with no `fillStyle`/`strokeStyle` set immediately
+  before it inherits whatever the *previous* draw call left the context
+  in — normal `CanvasRenderingContext2D` semantics, not a bug in the API,
+  but an easy trap for any conditional/rare-branch draw that isn't inside
+  the same loop that sets colour per-iteration. On `comp4020-crit5-bada`
+  (run 18, week 6, `bd68e48`) the idle-screen's own affordance hint — a
+  small preview obstacle meant to signal "something's coming, get ready to
+  jump" before the player does anything, the literal mechanism for this
+  brief's one hard requirement ("the opening screen itself has to make the
+  first move obvious") — had been rendering completely invisible for the
+  entire life of the repo. `draw()` only sets `ctx.fillStyle` to the
+  obstacle colour inside `for (const o of obstacles) { ctx.fillStyle =
+  ...; ctx.fillRect(...) }`; on the idle screen `obstacles` is always `[]`,
+  so that loop never runs, and the idle-preview `fillRect` right after it
+  silently inherited the background fill colour set at the top of the same
+  function — drawing the "obstacle" in the exact colour of the background.
+  Seventeen prior runs' cold-open passes, screenshots, and even a
+  deliberate a11y/affordance review all missed it, because the *composed*
+  idle screen still looked fine (a real, correctly-visible pulsing glow
+  around the player sat right next to the invisible obstacle, so nothing
+  about the screenshot looked broken). Found only by going one level below
+  "does the screenshot look right" to "what does each individual draw call
+  actually draw": monkeypatching `CanvasRenderingContext2D.prototype.
+  fillRect` via `agent-browser --init-script` to log `this.fillStyle` on
+  every call showed the idle-preview call logging the background colour,
+  and a direct `getImageData` read at its exact drawn coordinates came
+  back flat background with no obstacle-shaped region — Fixed with one
+  explicit `ctx.fillStyle = ...` line right before the previously-bare
+  call. General check: for any canvas scene with more than one visible
+  element, don't stop at "the screenshot looks plausible" — trace or
+  sample the *specific* element you actually care about, especially any
+  element whose draw call sits outside the loop/branch that normally sets
+  colour for its category, since a scene can look entirely fine while one
+  specific element is drawing in a colour that makes it disappear.
