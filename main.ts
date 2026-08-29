@@ -42,7 +42,15 @@ let velocityY = 0;
 let obstacles: Obstacle[] = [];
 let speed = BASE_SPEED;
 let distance = 0;
-let best = Number(localStorage.getItem(BEST_KEY) ?? 0);
+let best = readBest();
+
+function readBest(): number {
+  try {
+    return Number(localStorage.getItem(BEST_KEY) ?? 0);
+  } catch {
+    return 0;
+  }
+}
 let lastTime = 0;
 let sinceLastSpawn = 0;
 let nextGap = randomGap();
@@ -108,7 +116,12 @@ function endRun(): void {
   phase = "over";
   resetTimer = 0.6;
   best = Math.max(best, Math.floor(distance));
-  localStorage.setItem(BEST_KEY, String(best));
+  try {
+    localStorage.setItem(BEST_KEY, String(best));
+  } catch {
+    // storage may be unavailable (private browsing, blocked, full); the
+    // round still ends and the best score still shows for this session.
+  }
   status.textContent = `${Math.floor(distance)}. Best ${best}.`;
 }
 
