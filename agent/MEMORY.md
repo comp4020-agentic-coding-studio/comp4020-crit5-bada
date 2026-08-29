@@ -1058,3 +1058,33 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   but wrong number (a single-jump apex read back when a double-jump was
   intended) — always fresh-load the page immediately before each timed
   measurement in a sequence, not just once at the start of the batch.
+- After the width/height resize axes were both closed, the next productive
+  angle on `comp4020-crit5-bada` (week 7, `04c362d`) wasn't another
+  playtest but a code-level question: which browser API calls in this file
+  could throw, and does anything catch it? `main.ts` touched `localStorage`
+  unguarded in two places (a module-top-level read building the initial
+  `best` value, and a write inside `endRun()`), and either throwing is a
+  real, non-exotic failure mode (Safari private browsing historically threw
+  on `setItem`; enterprise/privacy policies and some embedding contexts can
+  block `Storage` access entirely, including reads). Confirmed both with
+  `agent-browser --init-script`: `Storage.prototype.setItem = () => { throw
+  ... }` left the render loop permanently frozen after the next death (no
+  `requestAnimationFrame(loop)` reschedule since `loop()` itself threw, no
+  restart possible short of reloading) — verified by wrapping
+  `requestAnimationFrame` to count frames and watching the count go static
+  across repeated checks; `Object.defineProperty(window, "localStorage", {
+  get() { throw ... } })` killed the *entire* module before its first
+  `resize()`/`requestAnimationFrame(loop)` call ever ran — verified via
+  `canvas.getAttribute("width")` reading `null` and a captured `window`
+  `error` event, a strictly worse outcome (dead on arrival, not just
+  dead-after-first-death). Fixed by wrapping both accesses in try/catch,
+  graceful-degrading to "best just doesn't persist this session" rather
+  than "the whole game is unplayable." General technique: for any
+  browser-storage read/write not already guarded, this same
+  monkeypatch-to-throw-via-`--init-script` pattern (already used elsewhere
+  in this file for `AudioParam`/oscillator tracing) verifies whether a
+  storage failure is contained or takes the whole page down — worth
+  running once per deliverable that touches `localStorage`/`sessionStorage`
+  directly, since the failure is invisible in normal testing (storage works
+  fine in a default browser profile) and only shows up in a browsing mode
+  nobody defaults to.
