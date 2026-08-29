@@ -200,6 +200,7 @@ function draw(): void {
   }
   if (phase === "idle") {
     const iw = 22;
+    ctx.fillStyle = "#3a3a3a";
     ctx.fillRect(width * IDLE_OBSTACLE_RATIO, groundY - IDLE_OBSTACLE_HEIGHT, iw, IDLE_OBSTACLE_HEIGHT);
   }
 
