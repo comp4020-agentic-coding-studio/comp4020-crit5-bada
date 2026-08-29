@@ -1,70 +1,115 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+`Jump` is a one-button endless runner: a red square sits on a ground line,
+short and tall dark obstacles scroll in from the right at a speed that ramps
+with survival time, and the only input --- Space, ArrowUp, Enter, click, or
+tap --- makes the player jump. A second press mid-air spends a double jump,
+letting a tall obstacle be cleared without ever adding a second key to learn.
+The idle screen draws a static obstacle and a pulsing glow around the player
+before any input, so the first move (jump over that) is visible rather than
+explained. It ships as a static site with no backend, straight to GitHub
+Pages.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+1. **Two mechanics, one input.** The brief calls a second interacting
+   mechanic the harder, better move "if you can keep a stranger finishing
+   inside five minutes" --- but a second mechanic usually means a second key,
+   which breaks the no-tutorial rule the moment a player needs a hint to find
+   it. A double jump sidesteps this: it reuses the exact input the base
+   mechanic already teaches, so a death against a tall obstacle still reads
+   as "I didn't jump enough," the same feedback shape as the base mechanic.
+   Before ever touching the browser, I simulated the exact gravity/velocity
+   constants in Node and found a 500ms+ non-frame-perfect window between the
+   two presses at every obstacle gap and speed the game reaches, then traced
+   the shipped bundle's own player position (monkeypatching
+   `CanvasRenderingContext2D.prototype.translate` via
+   `agent-browser --init-script`, since `draw()` calls it once per frame at
+   the player's centre) to confirm the built code produces the exact apex
+   heights the simulation predicted. Only after that did a blind subagent
+   play it cold: it died repeatedly against tall obstacles on one deliberate
+   press, then found the double jump by mashing out of frustration, not on a
+   first guess --- exactly Bushnell's "easy to learn, difficult to master,"
+   not a discoverability gap, so I left it unhinted rather than patching in
+   a visual cue that would have undercut the same rule the mechanic respects.
+   [`1e497aa`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/1e497aa)
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+2. **The affordance requirement was silently unmet for the whole life of the
+   repo.** The brief's one hard, unfakeable line is that the opening screen
+   itself has to make the first move obvious. An idle-screen obstacle
+   preview existed in the code from early on --- the constants, the phase
+   check, the `fillRect` call were all there, and every screenshot and
+   cold-open playtest across many runs looked fine, because the pulsing red
+   glow around the player was real and visible and masked that the obstacle
+   itself was not. `draw()` only sets `ctx.fillStyle` inside the per-obstacle
+   loop, and the idle screen's `obstacles` array is always empty, so the
+   idle-preview `fillRect` right after that loop silently inherited the
+   *background* fill colour instead. I found it by going one level below "does
+   the composed screenshot look right" to "what colour did this specific draw
+   call actually use" --- monkeypatching `fillRect` to log `this.fillStyle` on
+   every call, and reading `getImageData` at the preview's exact coordinates,
+   which came back flat background with no obstacle-shaped region at all.
+   Fixed with one explicit `fillStyle` set immediately before the call, then
+   re-verified the same way: `getImageData` now reads the obstacle colour, and
+   a screenshot shows a clearly visible dark bar next to the player.
+   [`bd68e48`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/bd68e48)
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
+3. **State that only ever moves one way needs an explicit reset the other
+   way.** Two separate bugs shared this shape: `distance` (score) was reset
+   to 0 on death but not when returning to idle, so a fast restart briefly
+   showed the *previous* run's score before the new run's first frame caught
+   up; and the `aria-live` `#status` element was written only in `endRun()`,
+   so a screen-reader user restarting after a loss kept hearing the previous
+   run's final score long after the visible canvas had reset and climbed
+   past it. Both were found by driving the reverse transition by hand
+   (`agent-browser eval` reading the same hook immediately before and after a
+   restart) rather than only testing the direction that's easy to trigger
+   once (death). Fixed by clearing both in `resetToIdle()`.
+   [`c7126dd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/c7126dd),
+   [`87c077d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/87c077d)
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+4. **A resize mid-run desynchronised the player from every obstacle already
+   on screen.** The player's x is a live fraction of canvas width, recomputed
+   every frame; each obstacle's x is set once at spawn and never touched
+   again. A width change moved the player instantly while obstacles stayed
+   exactly where they were --- a free pass through one that would otherwise
+   have hit, or an unearned death from one that wouldn't have. Fixed by
+   rescaling every in-flight obstacle's x by the same width ratio on resize,
+   pulled the ratio math into a small pure function once it was fixed, and
+   added unit tests for it so the fix isn't resting on manual verification
+   alone. A related height check found a modest, non-maximised window
+   (800×500, not an exotic device) clipping the player during a double-jump
+   apex; fixed with a CSS height floor rather than touching any of the
+   already simulation-verified jump constants.
+   [`096fb2a`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/096fb2a),
+   [`e5a6620`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/e5a6620),
+   [`4c95a1b`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/4c95a1b)
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+## Sensors added
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
+- `spec/game.test.ts` puts the brief's own testable half under test directly:
+  `rectsOverlap` (a collision ends the round, including the touching-edges
+  and vertical-only-overlap edge cases), `rescaleObstacleX` (a resize keeps
+  an obstacle's relative distance), and `tryJump` (a double jump is only
+  allowed while jumps remain).
+- The `Storage`-guard fix
+  ([`04c362d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-bada/commit/04c362d))
+  came from a general check worth repeating on any future deliverable that
+  touches `localStorage` directly: monkeypatch `Storage.prototype.setItem`
+  (and a `localStorage` getter) to throw via `--init-script` and confirm a
+  storage failure degrades gracefully rather than freezing the whole page,
+  since it's invisible in a default browser profile and only shows up in a
+  browsing mode nobody defaults to.
 
-> the prompt, verbatim
+## Honest limitation
 
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that a
-reflection entry the marker reads is in `reflections/`, and that your
-`CLAUDE.md` is there --- before a marker ever opens the file. It checks that
-your map is traceable, not that it is good: the marker judges whether your
-small, deliberately chosen set of moments shows real judgement and reflection. A
-green check is not a substitute for that curation.
-
-Images aren't checked: unlike a citation whose SHA doesn't resolve, a broken
-image is visible the moment this file is rendered on GitHub.
+This is a fast, one-button reflex game with effectively no on-screen text
+during play. A screen-reader user gets the death/restart announcements
+correctly (that's what the aria-live fix above protects), but there is no
+non-visual channel for the actual timing mechanic itself --- the collision
+has to be seen coming to be dodged. I judged this an acceptable limitation
+for a five-minute arcade prototype rather than a gap to paper over, and did
+not add a fake accommodation that wouldn't actually make the game playable
+non-visually.
